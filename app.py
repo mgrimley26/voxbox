@@ -1,58 +1,56 @@
 import streamlit as st
 from openai import OpenAI
 
-st.title("voxbox")
+# --- STEALTH UI CONFIG ---
+st.set_page_config(page_title="Draft_v1", layout="centered", initial_sidebar_state="collapsed")
 
-# Initialize session state for verification and chat history
-if "verified" not in st.session_state:
-    st.session_state.verified = False
+# CSS to hide all "Streamlit" visual cues and make text look like a document
+st.markdown("""
+    <style>
+        #MainMenu, footer, header {visibility: hidden;}
+        .stMarkdown { font-family: 'Courier New', Courier, monospace; font-size: 14px; }
+        .stTextInput > div > div > input { background-color: transparent; border: 1px solid #ddd; }
+    </style>
+""", unsafe_allow_html=True)
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "verified" not in st.session_state:
+    st.session_state.verified = False
 
-# --- PAGE 1: API KEY INPUT ---
+# --- HIDDEN INITIALIZATION ---
 if not st.session_state.verified:
-    api_key = st.text_input("Enter your API Key", type="password")
-    
-    if st.button("Verify Key"):
-        if api_key:
-            try:
-                # Test the key by listing models (low cost/impact)
-                client = OpenAI(api_key=api_key)
-                client.models.list() 
-                
-                # If successful, save to session state
-                st.session_state.openai_key = api_key
-                st.session_state.verified = True
-                st.rerun()
-            except Exception as e:
-                st.error(f"Invalid API Key: {e}")
-        else:
-            st.warning("Please enter a key.")
+    # Quiet login: looks like a "Serial Number" or "Session ID" entry
+    key = st.text_input("Session ID", type="password")
+    if key:
+        try:
+            client = OpenAI(api_key=key)
+            client.models.list()
+            st.session_state.key = key
+            st.session_state.verified = True
+            st.rerun()
+        except: st.error("Invalid ID")
+    st.stop()
 
-# --- PAGE 2: CHATBOT INTERFACE ---
-else:
-    client = OpenAI(api_key=st.session_state.openai_key)
-    
-    # Display chat history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+# --- THE "DOCUMENT" INTERFACE ---
+client = OpenAI(api_key=st.session_state.key)
 
-    # Chat input
-    if prompt := st.chat_input("What is on your mind?"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+# Display the conversation as a simple text log
+for msg in st.session_state.messages:
+    prefix = "> " if msg["role"] == "user" else ""
+    st.markdown(f"{prefix}{msg['content']}")
 
-        with st.chat_message("assistant"):
-            stream = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=st.session_state.messages,
-                stream=True,
-            )
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
-    if st.button("Logout / Clear Key"):
-        st.session_state.verified = False
+# Discrete input at the bottom (replaces the obvious chat bar)
+with st.container():
+    query = st.text_input("", placeholder="Type here...", label_visibility="collapsed")
+    if query:
+        st.session_state.messages.append({"role": "user", "content": query})
+        
+        # Get AI response
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=st.session_state.messages
+        )
+        answer = response.choices[0].message.content
+        st.session_state.messages.append({"role": "assistant", "content": answer})
         st.rerun()
