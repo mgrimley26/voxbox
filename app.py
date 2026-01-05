@@ -1,7 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 
-st.title("Verified AI Chatbot")
+st.title("voxbox")
 
 # Initialize session state for verification and chat history
 if "verified" not in st.session_state:
@@ -11,7 +11,7 @@ if "messages" not in st.session_state:
 
 # --- PAGE 1: API KEY INPUT ---
 if not st.session_state.verified:
-    api_key = st.text_input("Enter your OpenAI API Key", type="password")
+    api_key = st.text_input("Enter your API Key", type="password")
     
     if st.button("Verify Key"):
         if api_key:
