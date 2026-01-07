@@ -46,7 +46,7 @@ else:
 
         with st.chat_message("assistant"):
             stream = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-5-mini",
                 messages=st.session_state.messages,
                 stream=True,
             )
